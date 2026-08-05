@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { type ReactNode } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
@@ -31,6 +32,14 @@ export function Button({
   const combined = `${baseStyles} ${variantStyles[variant]} ${className}`;
 
   if (href) {
+    if (href.startsWith("/")) {
+      return (
+        <Link href={href} className={combined}>
+          {children}
+        </Link>
+      );
+    }
+
     return (
       <a href={href} className={combined}>
         {children}

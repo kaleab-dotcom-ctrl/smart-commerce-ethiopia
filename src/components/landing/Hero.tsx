@@ -38,7 +38,7 @@ export function Hero() {
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button href="#get-started" className="w-full sm:w-auto px-8 py-3 text-base">
+            <Button href="/signup" className="w-full sm:w-auto px-8 py-3 text-base">
               Get Started
             </Button>
             <Button
