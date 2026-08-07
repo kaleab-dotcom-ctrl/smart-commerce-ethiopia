@@ -94,7 +94,7 @@ export default function ProductsPage() {
                   href="/dashboard/products"
                   className="rounded-lg bg-brand-green/10 px-3 py-1.5 text-xs font-bold text-brand-green transition-colors"
                 >
-                  Inventory Management
+                  Products
                 </Link>
               </nav>
             </div>

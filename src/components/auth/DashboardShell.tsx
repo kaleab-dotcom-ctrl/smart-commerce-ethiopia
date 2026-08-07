@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Container } from "@/components/ui/Container";
@@ -33,10 +34,26 @@ export function DashboardShell() {
       <header className="border-b border-border bg-surface">
         <Container>
           <div className="flex h-16 items-center justify-between">
-            <span className="text-base font-bold text-foreground">
-              Smart Commerce{" "}
-              <span className="text-brand-green">Ethiopia</span>
-            </span>
+            <div className="flex items-center gap-8">
+              <Link href="/dashboard" className="text-base font-bold text-foreground">
+                Smart Commerce{" "}
+                <span className="text-brand-green">Ethiopia</span>
+              </Link>
+              <nav className="flex items-center gap-1">
+                <Link
+                  href="/dashboard"
+                  className="rounded-lg bg-brand-green/10 px-3 py-1.5 text-xs font-bold text-brand-green transition-colors"
+                >
+                  Overview
+                </Link>
+                <Link
+                  href="/dashboard/products"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted hover:text-foreground hover:bg-slate-100 transition-colors"
+                >
+                  Products
+                </Link>
+              </nav>
+            </div>
             <LogoutButton />
           </div>
         </Container>
