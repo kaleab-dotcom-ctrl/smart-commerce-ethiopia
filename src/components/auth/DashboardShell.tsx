@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth";
 import { getProducts, Product } from "@/lib/products";
 import { getSales, Sale } from "@/lib/sales";
 import { KpiCards } from "@/components/dashboard/KpiCards";
+import { AIInsights } from "@/components/dashboard/AIInsights";
 import { RevenueOverview } from "@/components/dashboard/RevenueOverview";
 import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
 import { LowStockSummary } from "@/components/dashboard/LowStockSummary";
@@ -146,7 +147,7 @@ export function DashboardShell() {
                 Business Analytics Overview
               </h1>
               <p className="mt-1 text-xs text-muted sm:text-sm">
-                Real-time sales performance, revenue insights in ETB, and inventory monitoring.
+                Real-time sales performance, revenue insights in ETB, and AI business recommendations.
               </p>
             </div>
 
@@ -192,10 +193,13 @@ export function DashboardShell() {
               {/* 1. Four KPI Cards */}
               <KpiCards products={products} sales={sales} />
 
-              {/* 2. Revenue Overview Section */}
+              {/* 2. AI Business Insights */}
+              <AIInsights products={products} sales={sales} />
+
+              {/* 3. Revenue Overview Section */}
               <RevenueOverview sales={sales} />
 
-              {/* 3. Grid for Recent Sales & Low Stock Summary */}
+              {/* 4. Grid for Recent Sales & Low Stock Summary */}
               <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                 <RecentSalesTable sales={sales} />
                 <LowStockSummary products={products} />
