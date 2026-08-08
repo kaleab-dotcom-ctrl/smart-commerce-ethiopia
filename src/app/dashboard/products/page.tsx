@@ -96,6 +96,12 @@ export default function ProductsPage() {
                 >
                   Products
                 </Link>
+                <Link
+                  href="/dashboard/sales"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted hover:text-foreground hover:bg-slate-100 transition-colors"
+                >
+                  Sales
+                </Link>
               </nav>
             </div>
 
