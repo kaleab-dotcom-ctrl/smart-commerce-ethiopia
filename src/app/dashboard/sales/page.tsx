@@ -118,6 +118,12 @@ export default function SalesPage() {
                 >
                   Sales
                 </Link>
+                <Link
+                  href="/dashboard/orders"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted hover:text-foreground hover:bg-slate-100 transition-colors"
+                >
+                  Orders
+                </Link>
               </nav>
             </div>
 

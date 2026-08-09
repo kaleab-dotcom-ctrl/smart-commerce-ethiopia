@@ -7,49 +7,48 @@ import { Container } from "@/components/ui/Container";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { getSession } from "@/lib/auth";
 import { getProducts, Product } from "@/lib/products";
-import { getSales, Sale } from "@/lib/sales";
+import { getCustomers, Customer } from "@/lib/customers";
 import { getOrders, Order } from "@/lib/orders";
-import { KpiCards } from "@/components/dashboard/KpiCards";
-import { AIInsights } from "@/components/dashboard/AIInsights";
-import { InventoryAlerts } from "@/components/dashboard/InventoryAlerts";
-import { CategoryAnalytics } from "@/components/dashboard/CategoryAnalytics";
-import { RevenueOverview } from "@/components/dashboard/RevenueOverview";
-import { RecentProductsTable } from "@/components/dashboard/RecentProductsTable";
-import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
-import { RecentOrdersTable } from "@/components/dashboard/RecentOrdersTable";
+import { OrderStats } from "@/components/orders/OrderStats";
+import { OrderTable } from "@/components/orders/OrderTable";
+import { CreateOrderModal } from "@/components/orders/CreateOrderModal";
 
-export function DashboardShell() {
+export default function OrdersPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
+
   const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+
   const [loadingData, setLoadingData] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Fetch products, sales, and orders
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Load all necessary data from Supabase
   const loadData = useCallback(async () => {
     setFetchError(null);
     setLoadingData(true);
     try {
-      const [productsRes, salesRes, ordersRes] = await Promise.all([
-        getProducts(),
-        getSales(),
+      const [ordersRes, customersRes, productsRes] = await Promise.all([
         getOrders(),
+        getCustomers(),
+        getProducts(),
       ]);
 
-      if (productsRes.error) {
-        setFetchError(productsRes.error.message || "Failed to load products.");
+      if (ordersRes.error) {
+        setFetchError(ordersRes.error.message || "Failed to load orders.");
       } else {
-        setProducts(productsRes.data || []);
+        setOrders(ordersRes.data || []);
       }
 
-      if (salesRes.data) {
-        setSales(salesRes.data);
+      if (customersRes.data) {
+        setCustomers(customersRes.data);
       }
 
-      if (ordersRes.data) {
-        setOrders(ordersRes.data);
+      if (productsRes.data) {
+        setProducts(productsRes.data);
       }
     } catch (err: unknown) {
       const msg =
@@ -60,7 +59,7 @@ export function DashboardShell() {
     }
   }, []);
 
-  // Auth check & data load
+  // Auth check & data fetch
   useEffect(() => {
     let isMounted = true;
 
@@ -110,7 +109,7 @@ export function DashboardShell() {
               <nav className="hidden sm:flex items-center gap-1">
                 <Link
                   href="/dashboard"
-                  className="rounded-lg bg-brand-green/10 px-3 py-1.5 text-xs font-bold text-brand-green transition-colors"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted hover:text-foreground hover:bg-slate-100 transition-colors"
                 >
                   Overview
                 </Link>
@@ -128,7 +127,7 @@ export function DashboardShell() {
                 </Link>
                 <Link
                   href="/dashboard/orders"
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted hover:text-foreground hover:bg-slate-100 transition-colors"
+                  className="rounded-lg bg-brand-green/10 px-3 py-1.5 text-xs font-bold text-brand-green transition-colors"
                 >
                   Orders
                 </Link>
@@ -145,7 +144,7 @@ export function DashboardShell() {
       {/* Main Content Area */}
       <main className="py-8">
         <Container className="space-y-8">
-          {/* Title & Header Section */}
+          {/* Header Title Section */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold text-muted">
@@ -153,25 +152,35 @@ export function DashboardShell() {
                   Dashboard
                 </Link>
                 <span>/</span>
-                <span className="text-foreground">Overview</span>
+                <span className="text-foreground">Orders</span>
               </div>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                Business Analytics Overview
+                Orders & Fulfillment
               </h1>
               <p className="mt-1 text-xs text-muted sm:text-sm">
-                Real-time inventory valuation, category metrics, customer orders, and AI recommendations.
+                Create customer orders, process sales, and track fulfillment in ETB.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={loadData}
-              disabled={loadingData}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green disabled:opacity-60"
-            >
-              <span className={loadingData ? "animate-spin" : ""}>🔄</span>
-              <span>{loadingData ? "Refreshing…" : "Refresh Analytics"}</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={loadData}
+                disabled={loadingData}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green disabled:opacity-60"
+              >
+                <span className={loadingData ? "animate-spin" : ""}>🔄</span>
+                <span>{loadingData ? "Refreshing…" : "Refresh"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-green px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-brand-green-dark transition-colors"
+              >
+                <span>+ Create Order</span>
+              </button>
+            </div>
           </div>
 
           {fetchError && (
@@ -193,40 +202,33 @@ export function DashboardShell() {
             </div>
           )}
 
-          {loadingData && products.length === 0 && sales.length === 0 && orders.length === 0 ? (
+          {/* Stats KPI Section */}
+          <OrderStats orders={orders} />
+
+          {/* Orders Table */}
+          {loadingData && orders.length === 0 ? (
             <div className="rounded-xl border border-border bg-surface p-12 text-center">
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-brand-green border-t-transparent" />
               <p className="mt-4 text-xs font-medium text-muted">
-                Loading business metrics & insights…
+                Loading orders & customer data…
               </p>
             </div>
           ) : (
-            <>
-              {/* 1. Four Primary KPI Cards */}
-              <KpiCards products={products} />
-
-              {/* 2. Inventory Alert System */}
-              <InventoryAlerts products={products} />
-
-              {/* 3. AI Inventory Insights */}
-              <AIInsights products={products} />
-
-              {/* 4. Category Analytics & Inventory Value Visualization */}
-              <CategoryAnalytics products={products} />
-
-              {/* 5. Revenue Overview Section */}
-              <RevenueOverview sales={sales} />
-
-              {/* 6. Recent Orders & Recent Sales Grid */}
-              <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                <RecentOrdersTable orders={orders} />
-                <RecentSalesTable sales={sales} />
-              </div>
-
-              {/* 7. Recent Products */}
-              <RecentProductsTable products={products} />
-            </>
+            <OrderTable
+              orders={orders}
+              onOrderUpdated={loadData}
+              onOpenCreateModal={() => setIsCreateModalOpen(true)}
+            />
           )}
+
+          {/* Create Order Modal */}
+          <CreateOrderModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            products={products}
+            customers={customers}
+            onOrderCreated={loadData}
+          />
         </Container>
       </main>
     </div>

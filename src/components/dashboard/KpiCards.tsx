@@ -2,48 +2,36 @@
 
 import Link from "next/link";
 import { Product } from "@/lib/products";
-import { Sale } from "@/lib/sales";
 
 type KpiCardsProps = {
   products: Product[];
-  sales: Sale[];
 };
 
-export function KpiCards({ products, sales }: KpiCardsProps) {
+export function KpiCards({ products }: KpiCardsProps) {
   // 1. Total Products
   const totalProducts = products.length;
 
-  // 2. Today's Revenue (ETB)
-  const today = new Date();
-  const todaysSales = sales.filter((s) => {
-    try {
-      const saleDate = new Date(s.created_at);
-      return (
-        saleDate.getFullYear() === today.getFullYear() &&
-        saleDate.getMonth() === today.getMonth() &&
-        saleDate.getDate() === today.getDate()
-      );
-    } catch {
-      return false;
-    }
-  });
-
-  const todaysRevenue = todaysSales.reduce(
-    (sum, s) => sum + (Number(s.total_price) || 0),
+  // 2. Total Inventory Units
+  const totalInventoryUnits = products.reduce(
+    (sum, item) => sum + (Number(item.quantity) || 0),
     0
   );
 
-  // 3. Total Sales (Count)
-  const totalSalesCount = sales.length;
+  // 3. Inventory Value (ETB)
+  const totalInventoryValue = products.reduce(
+    (sum, item) =>
+      sum + (Number(item.price) || 0) * (Number(item.quantity) || 0),
+    0
+  );
 
   // 4. Low Stock Products (quantity <= 5)
   const lowStockCount = products.filter(
-    (p) => Number(p.quantity) <= 5
+    (item) => Number(item.quantity) <= 5
   ).length;
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {/* Total Products */}
+      {/* 1. Total Products */}
       <div className="group rounded-xl border border-border bg-surface p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted">
@@ -61,95 +49,104 @@ export function KpiCards({ products, sales }: KpiCardsProps) {
             href="/dashboard/products"
             className="text-xs font-semibold text-blue-600 hover:underline"
           >
-            Manage →
+            Catalog →
           </Link>
         </div>
-        <p className="mt-1 text-[11px] text-muted">Active SKUs in inventory</p>
+        <p className="mt-1 text-[11px] text-muted">Active SKUs in database</p>
       </div>
 
-      {/* Today's Revenue (ETB) */}
+      {/* 2. Total Inventory Units */}
       <div className="group rounded-xl border border-border bg-surface p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Today&apos;s Revenue
+            Total Inventory Units
           </span>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 font-semibold text-sm">
-            💵
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-brand-green font-semibold text-sm">
+            📊
           </div>
         </div>
         <div className="mt-3 flex items-baseline justify-between">
           <span className="text-2xl font-bold text-foreground">
-            {todaysRevenue.toLocaleString("en-US", {
+            {totalInventoryUnits.toLocaleString("en-US")}
+          </span>
+          <span className="text-xs text-muted">units</span>
+        </div>
+        <p className="mt-1 text-[11px] text-muted">In-stock physical inventory</p>
+      </div>
+
+      {/* 3. Inventory Value (ETB) */}
+      <div className="group rounded-xl border border-border bg-surface p-5 shadow-xs transition-all hover:shadow-md hover:border-green-300">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Inventory Value
+          </span>
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-green/10 text-brand-green font-semibold text-sm">
+            💰
+          </div>
+        </div>
+        <div className="mt-3 flex items-baseline justify-between">
+          <span className="text-2xl font-bold text-foreground">
+            {totalInventoryValue.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </span>
           <span className="text-xs font-bold text-brand-green">ETB</span>
         </div>
-        <p className="mt-1 text-[11px] text-muted">
-          From {todaysSales.length} {todaysSales.length === 1 ? "sale" : "sales"} today
-        </p>
+        <p className="mt-1 text-[11px] text-muted">Total retail valuation</p>
       </div>
 
-      {/* Total Sales */}
-      <div className="group rounded-xl border border-border bg-surface p-5 shadow-xs transition-all hover:shadow-md hover:border-green-300">
+      {/* 4. Low Stock (Visually Noticeable Card) */}
+      <div
+        className={`group rounded-xl border p-5 shadow-xs transition-all hover:shadow-md ${
+          lowStockCount > 0
+            ? "border-amber-300 bg-amber-50/40 hover:border-amber-400"
+            : "border-border bg-surface hover:border-slate-300"
+        }`}
+      >
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Total Sales
-          </span>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-green/10 text-brand-green font-semibold text-sm">
-            🧾
-          </div>
-        </div>
-        <div className="mt-3 flex items-baseline justify-between">
-          <span className="text-2xl font-bold text-foreground">
-            {totalSalesCount}
-          </span>
-          <Link
-            href="/dashboard/sales"
-            className="text-xs font-semibold text-brand-green hover:underline"
+          <span
+            className={`text-xs font-semibold uppercase tracking-wider ${
+              lowStockCount > 0 ? "text-amber-900" : "text-muted"
+            }`}
           >
-            History →
-          </Link>
-        </div>
-        <p className="mt-1 text-[11px] text-muted">Total recorded orders</p>
-      </div>
-
-      {/* Low Stock Products */}
-      <div className="group rounded-xl border border-border bg-surface p-5 shadow-xs transition-all hover:shadow-md hover:border-amber-300">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Low Stock Products
+            Low Stock Alerts
           </span>
           <div
             className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold ${
               lowStockCount > 0
-                ? "bg-amber-100 text-amber-700"
-                : "bg-slate-100 text-muted"
+                ? "bg-amber-100 text-amber-800 shadow-xs"
+                : "bg-emerald-50 text-emerald-600"
             }`}
           >
-            ⚠️
+            {lowStockCount > 0 ? "⚠️" : "✅"}
           </div>
         </div>
         <div className="mt-3 flex items-baseline justify-between">
           <span
             className={`text-2xl font-bold ${
-              lowStockCount > 0 ? "text-amber-600" : "text-foreground"
+              lowStockCount > 0 ? "text-amber-700" : "text-foreground"
             }`}
           >
             {lowStockCount}
           </span>
           <span
-            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
               lowStockCount > 0
-                ? "bg-amber-100 text-amber-800"
+                ? "bg-amber-200 text-amber-900 animate-pulse"
                 : "bg-emerald-100 text-emerald-800"
             }`}
           >
-            {lowStockCount > 0 ? "Items <= 5 units" : "Stock healthy"}
+            {lowStockCount > 0
+              ? `${lowStockCount} ${lowStockCount === 1 ? "item" : "items"} ≤ 5 units`
+              : "Stock healthy"}
           </span>
         </div>
-        <p className="mt-1 text-[11px] text-muted">Requires inventory restock</p>
+        <p className="mt-1 text-[11px] text-muted">
+          {lowStockCount > 0
+            ? "Requires urgent inventory restock"
+            : "All products above threshold"}
+        </p>
       </div>
     </div>
   );
