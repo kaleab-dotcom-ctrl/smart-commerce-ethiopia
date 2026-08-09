@@ -2,18 +2,25 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { Container } from "@/components/ui/Container";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { getSession } from "@/lib/auth";
 import { getProducts, Product } from "@/lib/products";
 import { getSales, Sale } from "@/lib/sales";
 import { getOrders, Order } from "@/lib/orders";
+import { DateRange, filterOrdersByDateRange } from "@/lib/analytics";
 import { KpiCards } from "@/components/dashboard/KpiCards";
+import { SalesKpiCards } from "@/components/dashboard/SalesKpiCards";
+import { RevenueChart } from "@/components/dashboard/RevenueChart";
+import { DemandForecast } from "@/components/dashboard/DemandForecast";
+import { SmartRecommendations } from "@/components/dashboard/SmartRecommendations";
+import { TopSellingProducts } from "@/components/dashboard/TopSellingProducts";
+import { TopCategories } from "@/components/dashboard/TopCategories";
+import { OrderStatusSummary } from "@/components/dashboard/OrderStatusSummary";
 import { AIInsights } from "@/components/dashboard/AIInsights";
 import { InventoryAlerts } from "@/components/dashboard/InventoryAlerts";
 import { CategoryAnalytics } from "@/components/dashboard/CategoryAnalytics";
-import { RevenueOverview } from "@/components/dashboard/RevenueOverview";
 import { RecentProductsTable } from "@/components/dashboard/RecentProductsTable";
 import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
 import { RecentOrdersTable } from "@/components/dashboard/RecentOrdersTable";
@@ -24,10 +31,11 @@ export function DashboardShell() {
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange>("30d");
   const [loadingData, setLoadingData] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Fetch products, sales, and orders
+  // Fetch products, sales, and orders from Supabase
   const loadData = useCallback(async () => {
     setFetchError(null);
     setLoadingData(true);
@@ -60,7 +68,7 @@ export function DashboardShell() {
     }
   }, []);
 
-  // Auth check & data load
+  // Auth check & initial data load
   useEffect(() => {
     let isMounted = true;
 
@@ -80,6 +88,12 @@ export function DashboardShell() {
       isMounted = false;
     };
   }, [router, loadData]);
+
+  // Filter orders by selected date range
+  const filteredOrders = useMemo(
+    () => filterOrdersByDateRange(orders, dateRange),
+    [orders, dateRange]
+  );
 
   if (checkingAuth) {
     return (
@@ -145,8 +159,8 @@ export function DashboardShell() {
       {/* Main Content Area */}
       <main className="py-8">
         <Container className="space-y-8">
-          {/* Title & Header Section */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {/* Header Title Section */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold text-muted">
                 <Link href="/dashboard" className="hover:underline">
@@ -156,22 +170,24 @@ export function DashboardShell() {
                 <span className="text-foreground">Overview</span>
               </div>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                Business Analytics Overview
+                Sales Analytics & Business Intelligence
               </h1>
               <p className="mt-1 text-xs text-muted sm:text-sm">
-                Real-time inventory valuation, category metrics, customer orders, and AI recommendations.
+                Real-time sales performance in ETB, order fulfillment trends, and inventory intelligence.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={loadData}
-              disabled={loadingData}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green disabled:opacity-60"
-            >
-              <span className={loadingData ? "animate-spin" : ""}>🔄</span>
-              <span>{loadingData ? "Refreshing…" : "Refresh Analytics"}</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={loadData}
+                disabled={loadingData}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green disabled:opacity-60"
+              >
+                <span className={loadingData ? "animate-spin" : ""}>🔄</span>
+                <span>{loadingData ? "Refreshing…" : "Refresh Analytics"}</span>
+              </button>
+            </div>
           </div>
 
           {fetchError && (
@@ -197,33 +213,67 @@ export function DashboardShell() {
             <div className="rounded-xl border border-border bg-surface p-12 text-center">
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-brand-green border-t-transparent" />
               <p className="mt-4 text-xs font-medium text-muted">
-                Loading business metrics & insights…
+                Loading sales analytics & business insights…
               </p>
             </div>
           ) : (
             <>
-              {/* 1. Four Primary KPI Cards */}
-              <KpiCards products={products} />
+              {/* 1. Primary Sales KPI Cards (Completed Revenue, Orders, Units, AOV) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
+                    Realized Sales Performance ({dateRange === "7d" ? "Last 7 Days" : dateRange === "30d" ? "Last 30 Days" : dateRange === "90d" ? "Last 90 Days" : "All Time"})
+                  </h2>
+                </div>
+                <SalesKpiCards orders={filteredOrders} />
+              </div>
 
-              {/* 2. Inventory Alert System */}
+              {/* 2. Smart Product Recommendations Engine */}
+              <SmartRecommendations products={products} orders={orders} />
+
+              {/* 3. Primary Inventory KPI Cards (Total Products, Units, Valuation ETB, Low Stock) */}
+              <div className="space-y-3">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
+                  Physical Inventory Health
+                </h2>
+                <KpiCards products={products} />
+              </div>
+
+              {/* 4. Revenue & Sales Trend Chart */}
+              <RevenueChart
+                orders={orders}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+              />
+
+              {/* 5. Demand Forecasting & Inventory Planning */}
+              <DemandForecast products={products} orders={orders} />
+
+              {/* 4. Top-Selling Products & Top Categories Grid */}
+              <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                <TopSellingProducts orders={filteredOrders} />
+                <TopCategories orders={filteredOrders} products={products} />
+              </div>
+
+              {/* 5. Order Status Summary */}
+              <OrderStatusSummary orders={filteredOrders} />
+
+              {/* 6. Inventory Alert System */}
               <InventoryAlerts products={products} />
 
-              {/* 3. AI Inventory Insights */}
+              {/* 7. AI Inventory Insights */}
               <AIInsights products={products} />
 
-              {/* 4. Category Analytics & Inventory Value Visualization */}
+              {/* 8. Category Inventory Valuation Breakdown */}
               <CategoryAnalytics products={products} />
 
-              {/* 5. Revenue Overview Section */}
-              <RevenueOverview sales={sales} />
-
-              {/* 6. Recent Orders & Recent Sales Grid */}
+              {/* 9. Recent Activity Grid */}
               <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                 <RecentOrdersTable orders={orders} />
                 <RecentSalesTable sales={sales} />
               </div>
 
-              {/* 7. Recent Products */}
+              {/* 10. Recent Products Catalog */}
               <RecentProductsTable products={products} />
             </>
           )}
