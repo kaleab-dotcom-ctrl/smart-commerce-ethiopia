@@ -15,6 +15,8 @@ import { SalesKpiCards } from "@/components/dashboard/SalesKpiCards";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { DemandForecast } from "@/components/dashboard/DemandForecast";
 import { SmartRecommendations } from "@/components/dashboard/SmartRecommendations";
+import { AnomalyDetection } from "@/components/dashboard/AnomalyDetection";
+import { BusinessAssistant } from "@/components/dashboard/BusinessAssistant";
 import { TopSellingProducts } from "@/components/dashboard/TopSellingProducts";
 import { TopCategories } from "@/components/dashboard/TopCategories";
 import { OrderStatusSummary } from "@/components/dashboard/OrderStatusSummary";
@@ -228,8 +230,14 @@ export function DashboardShell() {
                 <SalesKpiCards orders={filteredOrders} />
               </div>
 
+              {/* 2. Smart AI Business Assistant */}
+              <BusinessAssistant />
+
               {/* 2. Smart Product Recommendations Engine */}
               <SmartRecommendations products={products} orders={orders} />
+
+              {/* 3. Fraud & Anomaly Detection System */}
+              <AnomalyDetection products={products} orders={orders} />
 
               {/* 3. Primary Inventory KPI Cards (Total Products, Units, Valuation ETB, Low Stock) */}
               <div className="space-y-3">
