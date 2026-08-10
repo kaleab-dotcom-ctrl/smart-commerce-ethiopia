@@ -380,12 +380,13 @@ export async function updateOrderStatus(
       const newQty = product.quantity - item.quantity;
       await updateProduct(product.id, { quantity: newQty });
 
-      // Record in sales table for backwards compatibility
+      // Record in sales table with user ownership
       await addSale({
         product_id: product.id,
         product_name: product.name,
         quantity: item.quantity,
         total_price: item.subtotal,
+        ...(user?.id ? { user_id: user.id } : {}),
       });
     }
 
