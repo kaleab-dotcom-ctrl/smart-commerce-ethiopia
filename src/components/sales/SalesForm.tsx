@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Product } from "@/lib/products";
+import { Product, updateProduct } from "@/lib/products";
 import { addSale, NewSale } from "@/lib/sales";
 import { supabase } from "@/lib/supabase";
 
@@ -73,10 +73,10 @@ export function SalesForm({ products, onSaleAdded }: SalesFormProps) {
 
       // 2. Decrease product quantity in Supabase
       const updatedQuantity = availableStock - parsedQuantity;
-      const { error: stockError } = await supabase
-        .from("products")
-        .update({ quantity: updatedQuantity })
-        .eq("id", selectedProduct.id);
+      const { error: stockError } = await updateProduct(
+        selectedProduct.id,
+        { quantity: updatedQuantity }
+      );
 
       if (stockError) {
         setError(

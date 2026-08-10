@@ -7,6 +7,7 @@ export type OrderStatus = "pending" | "completed" | "cancelled";
 
 export type OrderItem = {
   id: string;
+  user_id?: string;
   order_id: string;
   product_id: string;
   quantity: number;
@@ -25,6 +26,7 @@ export type NewOrderItem = {
 
 export type Order = {
   id: string;
+  user_id?: string;
   customer_id: string | null;
   status: OrderStatus;
   total_amount: number;
@@ -49,15 +51,25 @@ export function calculateOrderTotal(
   );
 }
 
-// Fetch all orders with customer details and items
+// Fetch all orders belonging ONLY to the currently logged-in user with customer details and items
 export async function getOrders() {
-  const { data: ordersData, error: ordersError } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let ordersQuery = supabase
     .from("orders")
     .select(`
       *,
       customer:customers(*)
     `)
     .order("created_at", { ascending: false });
+
+  if (user?.id) {
+    ordersQuery = ordersQuery.eq("user_id", user.id);
+  }
+
+  const { data: ordersData, error: ordersError } = await ordersQuery;
 
   if (ordersError) {
     return { data: null, error: ordersError };
@@ -67,15 +79,21 @@ export async function getOrders() {
     return { data: [], error: null };
   }
 
-  // Fetch all order_items for these orders
+  // Fetch all order_items belonging to these orders and user
   const orderIds = ordersData.map((o) => o.id);
-  const { data: itemsData } = await supabase
+  let itemsQuery = supabase
     .from("order_items")
     .select(`
       *,
       product:products(name)
     `)
     .in("order_id", orderIds);
+
+  if (user?.id) {
+    itemsQuery = itemsQuery.eq("user_id", user.id);
+  }
+
+  const { data: itemsData } = await itemsQuery;
 
   // Map product names into order items
   const itemsByOrder = new Map<string, OrderItem[]>();
@@ -84,6 +102,7 @@ export async function getOrders() {
     const existing = itemsByOrder.get(orderId) || [];
     existing.push({
       id: item.id,
+      user_id: item.user_id,
       order_id: item.order_id,
       product_id: item.product_id,
       quantity: Number(item.quantity),
@@ -96,12 +115,14 @@ export async function getOrders() {
 
   const formattedOrders: Order[] = ordersData.map((order: any) => ({
     id: order.id,
+    user_id: order.user_id,
     customer_id: order.customer_id,
     status: order.status as OrderStatus,
     total_amount: Number(order.total_amount),
     created_at: order.created_at,
     customer: order.customer ? {
       id: order.customer.id,
+      user_id: order.customer.user_id,
       name: order.customer.name,
       email: order.customer.email,
       phone: order.customer.phone,
@@ -113,22 +134,31 @@ export async function getOrders() {
   return { data: formattedOrders, error: null };
 }
 
-// Fetch single order by ID with details
+// Fetch single order by ID with details belonging to the currently logged-in user
 export async function getOrderById(id: string) {
-  const { data: order, error } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let orderQuery = supabase
     .from("orders")
     .select(`
       *,
       customer:customers(*)
     `)
-    .eq("id", id)
-    .single();
+    .eq("id", id);
+
+  if (user?.id) {
+    orderQuery = orderQuery.eq("user_id", user.id);
+  }
+
+  const { data: order, error } = await orderQuery.single();
 
   if (error || !order) {
     return { data: null, error: error || new Error("Order not found") };
   }
 
-  const { data: items } = await supabase
+  let itemsQuery = supabase
     .from("order_items")
     .select(`
       *,
@@ -136,8 +166,15 @@ export async function getOrderById(id: string) {
     `)
     .eq("order_id", id);
 
+  if (user?.id) {
+    itemsQuery = itemsQuery.eq("user_id", user.id);
+  }
+
+  const { data: items } = await itemsQuery;
+
   const formattedItems: OrderItem[] = (items || []).map((item: any) => ({
     id: item.id,
+    user_id: item.user_id,
     order_id: item.order_id,
     product_id: item.product_id,
     quantity: Number(item.quantity),
@@ -148,12 +185,14 @@ export async function getOrderById(id: string) {
 
   const formattedOrder: Order = {
     id: order.id,
+    user_id: order.user_id,
     customer_id: order.customer_id,
     status: order.status as OrderStatus,
     total_amount: Number(order.total_amount),
     created_at: order.created_at,
     customer: order.customer ? {
       id: order.customer.id,
+      user_id: order.customer.user_id,
       name: order.customer.name,
       email: order.customer.email,
       phone: order.customer.phone,
@@ -173,6 +212,10 @@ export async function createOrder(
   if (!items || items.length === 0) {
     return { data: null, error: new Error("Order must contain at least one item") };
   }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // 1. Fetch current product inventory to validate stock
   const { data: productsData, error: prodErr } = await getProducts();
@@ -212,6 +255,7 @@ export async function createOrder(
       customer_id: newOrder.customer_id || null,
       status: initialStatus === "completed" ? "pending" : initialStatus, // create as pending first if completing
       total_amount: newOrder.total_amount,
+      ...(user?.id ? { user_id: user.id } : {}),
     })
     .select()
     .single();
@@ -227,6 +271,7 @@ export async function createOrder(
     quantity: item.quantity,
     unit_price: item.unit_price,
     subtotal: item.subtotal,
+    ...(user?.id ? { user_id: user.id } : {}),
   }));
 
   const { error: itemsError } = await supabase
@@ -235,7 +280,9 @@ export async function createOrder(
 
   if (itemsError) {
     // Cleanup order if items insert failed
-    await supabase.from("orders").delete().eq("id", createdOrder.id);
+    let cleanupQuery = supabase.from("orders").delete().eq("id", createdOrder.id);
+    if (user?.id) cleanupQuery = cleanupQuery.eq("user_id", user.id);
+    await cleanupQuery;
     return { data: null, error: itemsError };
   }
 
@@ -261,6 +308,10 @@ export async function updateOrderStatus(
   orderId: string,
   newStatus: OrderStatus
 ) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   // If completing an order, perform stock verification and inventory deduction
   if (newStatus === "completed") {
     // Try stored procedure first if available
@@ -339,23 +390,25 @@ export async function updateOrderStatus(
     }
 
     // 4. Update order status to completed
-    const { data, error } = await supabase
+    let updateQuery = supabase
       .from("orders")
       .update({ status: "completed" })
-      .eq("id", orderId)
-      .select()
-      .single();
+      .eq("id", orderId);
 
+    if (user?.id) updateQuery = updateQuery.eq("user_id", user.id);
+
+    const { data, error } = await updateQuery.select().single();
     return { data, error };
   }
 
   // Standard status update for non-completed statuses (e.g. pending -> cancelled)
-  const { data, error } = await supabase
+  let statusUpdateQuery = supabase
     .from("orders")
     .update({ status: newStatus })
-    .eq("id", orderId)
-    .select()
-    .single();
+    .eq("id", orderId);
 
+  if (user?.id) statusUpdateQuery = statusUpdateQuery.eq("user_id", user.id);
+
+  const { data, error } = await statusUpdateQuery.select().single();
   return { data, error };
 }

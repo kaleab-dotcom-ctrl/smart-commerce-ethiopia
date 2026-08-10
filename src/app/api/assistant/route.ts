@@ -74,22 +74,31 @@ export async function POST(req: NextRequest) {
     const previousTurn = messages.length >= 3 ? messages[messages.length - 3] : null;
     const previousAssistantReply = messages.length >= 2 ? messages[messages.length - 2].content : "";
 
-    // Fetch products and orders for business context
+    // Fetch products and orders for business context belonging strictly to this user
     const [productsRes, ordersRes] = await Promise.all([
-      supabase.from("products").select("*").order("created_at", { ascending: false }),
-      supabase.from("orders").select("*, customer:customers(*)").order("created_at", { ascending: false }),
+      supabase
+        .from("products")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("orders")
+        .select("*, customer:customers(*)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
     ]);
 
     const products: Product[] = productsRes.data || [];
     const rawOrders = ordersRes.data || [];
 
-    // Fetch order items for orders
+    // Fetch order items for orders belonging to this user
     let orders: Order[] = [];
     if (rawOrders.length > 0) {
       const orderIds = rawOrders.map((o: any) => o.id);
       const { data: itemsData } = await supabase
         .from("order_items")
         .select("*, product:products(name)")
+        .eq("user_id", user.id)
         .in("order_id", orderIds);
 
       const itemsByOrder = new Map<string, any[]>();

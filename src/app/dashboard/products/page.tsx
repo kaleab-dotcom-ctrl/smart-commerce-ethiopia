@@ -10,6 +10,7 @@ import { getProducts, Product } from "@/lib/products";
 import { ProductForm } from "@/components/products/ProductForm";
 import { ProductTable } from "@/components/products/ProductTable";
 import { ProductStats } from "@/components/products/ProductStats";
+import { AddProductModal } from "@/components/products/AddProductModal";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -17,8 +18,9 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Fetch products from Supabase
+  // Fetch products belonging ONLY to the currently logged-in user
   const loadProducts = useCallback(async () => {
     setFetchError(null);
     try {
@@ -122,7 +124,7 @@ export default function ProductsPage() {
       <main className="py-8">
         <Container className="space-y-8">
           {/* Title & Header Section */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold text-muted">
                 <Link href="/dashboard" className="hover:underline">
@@ -139,15 +141,27 @@ export default function ProductsPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={loadProducts}
-              disabled={loadingProducts}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green disabled:opacity-60"
-            >
-              <span className={loadingProducts ? "animate-spin" : ""}>🔄</span>
-              <span>{loadingProducts ? "Refreshing…" : "Refresh Table"}</span>
-            </button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(true)}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-green px-4 py-2 text-xs font-bold text-white shadow-xs transition-all hover:bg-brand-green-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green"
+              >
+                <span>+</span>
+                <span>Add Product</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={loadProducts}
+                disabled={loadingProducts}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green disabled:opacity-60"
+              >
+                <span className={loadingProducts ? "animate-spin" : ""}>🔄</span>
+                <span>{loadingProducts ? "Refreshing…" : "Refresh Table"}</span>
+              </button>
+            </div>
           </div>
 
           {fetchError && (
@@ -172,7 +186,7 @@ export default function ProductsPage() {
           {/* Stats Summary */}
           <ProductStats products={products} />
 
-          {/* Add Product Form */}
+          {/* Add Product Inline Form */}
           <ProductForm onProductAdded={loadProducts} />
 
           {/* Product List Table */}
@@ -184,8 +198,19 @@ export default function ProductsPage() {
               </p>
             </div>
           ) : (
-            <ProductTable products={products} onProductDeleted={loadProducts} />
+            <ProductTable
+              products={products}
+              onProductDeleted={loadProducts}
+              onProductUpdated={loadProducts}
+            />
           )}
+
+          {/* Add Product Modal Overlay */}
+          <AddProductModal
+            isOpen={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            onProductAdded={loadProducts}
+          />
         </Container>
       </main>
     </div>

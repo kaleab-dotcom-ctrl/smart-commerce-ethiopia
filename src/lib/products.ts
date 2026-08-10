@@ -2,7 +2,8 @@ import { supabase } from "@/lib/supabase";
 
 export type Product = {
   id: string;
-  business_id: string;
+  user_id?: string;
+  business_id?: string;
   name: string;
   category: string;
   price: number;
@@ -33,21 +34,75 @@ export function getStockStatusLabel(status: StockStatus): string {
   }
 }
 
+// Fetch products belonging ONLY to the currently logged-in user
 export async function getProducts() {
-  return supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let query = supabase
     .from("products")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (user?.id) {
+    query = query.eq("user_id", user.id);
+  }
+
+  return query;
 }
 
+// Add a new product attached to the logged-in user's user_id
 export async function addProduct(product: NewProduct) {
-  return supabase.from("products").insert(product).select().single();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    return { data: null, error: new Error("User authentication required to add product.") };
+  }
+
+  return supabase
+    .from("products")
+    .insert({
+      name: product.name,
+      category: product.category,
+      price: product.price,
+      quantity: product.quantity,
+      user_id: user.id,
+      ...(product.business_id ? { business_id: product.business_id } : {}),
+    })
+    .select()
+    .single();
 }
 
+// Update a product owned by the logged-in user
 export async function updateProduct(id: string, updates: UpdateProduct) {
-  return supabase.from("products").update(updates).eq("id", id).select().single();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let query = supabase
+    .from("products")
+    .update(updates)
+    .eq("id", id);
+
+  if (user?.id) {
+    query = query.eq("user_id", user.id);
+  }
+
+  return query.select().single();
 }
 
+// Delete a product belonging to the logged-in user
 export async function deleteProduct(id: string) {
-  return supabase.from("products").delete().eq("id", id);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let query = supabase.from("products").delete().eq("id", id);
+  if (user?.id) {
+    query = query.eq("user_id", user.id);
+  }
+  return query;
 }
